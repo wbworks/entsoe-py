@@ -224,7 +224,9 @@ class EntsoeRawClient:
         response = self.base_request(params=params, start=start, end=end)
         return response.text
 
-    def query_wind_and_solar_forecast(self, country_code, start, end, psr_type=None, lookup_bzones=False):
+    def query_wind_and_solar_forecast(self, country_code, start, end,
+                                      psr_type=None, lookup_bzones=False,
+                                      intraday=False):
         """
         Parameters
         ----------
@@ -235,7 +237,8 @@ class EntsoeRawClient:
             filter on a single psr type
         lookup_bzones : bool
             if True, country_code is expected to be a bidding zone
-
+        intraday : bool
+            if True, intraday process is queried (A40)
         Returns
         -------
         str
@@ -252,6 +255,8 @@ class EntsoeRawClient:
         }
         if psr_type:
             params.update({'psrType': psr_type})
+        if intraday:
+            params.update({'processType': 'A40'})
 
         response = self.base_request(params=params, start=start, end=end)
         return response.text
@@ -618,7 +623,7 @@ class EntsoePandasClient(EntsoeRawClient):
 
     @year_limited
     def query_wind_and_solar_forecast(self, country_code, start, end, psr_type=None,
-                                      lookup_bzones=False):
+                                      lookup_bzones=False, intraday=False):
         """
         Parameters
         ----------
@@ -629,16 +634,18 @@ class EntsoePandasClient(EntsoeRawClient):
             filter on a single psr type
         lookup_bzones : bool
             if True, country_code is expected to be a bidding zone
-
+        intraday : bool
+            if True, intraday process is queried (A40)
         Returns
         -------
         pd.DataFrame
         """
         text = super(EntsoePandasClient, self).query_wind_and_solar_forecast(
             country_code=country_code, start=start, end=end, psr_type=psr_type,
-            lookup_bzones=lookup_bzones)
+            lookup_bzones=lookup_bzones, intraday=intraday)
         df = parse_generation(text)
         df = df.tz_convert(TIMEZONE_MAPPINGS[country_code])
+        df = df.truncate(before=start, after=end)
         return df
 
     @year_limited
